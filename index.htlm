@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculadora Modelos de Población</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    input, button, select {
+      padding: 10px;
+      margin: 5px 0;
+      width: 100%;
+    }
+    canvas {
+      margin-top: 20px;
+    }
+    .math {
+      margin-top: 20px;
+      background: #eef;
+      padding: 10px;
+      border-radius: 6px;
+    }
+    #camposLogistico, #camposExponencial {
+      display: none;
+    }
+    .resultado {
+      margin-top: 15px;
+      background: #e6ffe6;
+      padding: 10px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Calculadora de Población</h1>
+
+  <label for="modelo">Selecciona el modelo:</label>
+  <select id="modelo">
+    <option value="logistico">Modelo Logístico</option>
+    <option value="exponencial">Modelo Exponencial</option>
+  </select>
+
+  <div id="camposLogistico">
+    <label for="P0">Población inicial (P₀):</label>
+    <input type="number" id="P0" value="10">
+
+    <label for="PinterLog">Población intermedia (P):</label>
+    <input type="number" id="PinterLog" value="20">
+
+    <label for="tinterLog">Tiempo correspondiente a población intermedia:</label>
+    <input type="number" id="tinterLog" value="5">
+
+    <label for="K">Capacidad de carga (K):</label>
+    <input type="number" id="K" value="100">
+
+    <label for="tpredecirLog">Tiempo a predecir:</label>
+    <input type="number" id="tpredecirLog" value="10">
+  </div>
+
+  <div id="camposExponencial">
+    <label for="P0exp">Población inicial (P₀):</label>
+    <input type="number" id="P0exp" value="10">
+
+    <label for="Pinter">Población intermedia (P):</label>
+    <input type="number" id="Pinter" value="20">
+
+    <label for="tinter">Tiempo correspondiente a población intermedia:</label>
+    <input type="number" id="tinter" value="5">
+
+    <label for="tpredecir">Tiempo a predecir:</label>
+    <input type="number" id="tpredecir" value="10">
+  </div>
+
+  <button onclick="calcularModelo()">Calcular</button>
+
+  <div class="math" id="ecuacion">
+    <p>Selecciona un modelo para ver su ecuación.</p>
+  </div>
+
+  <div class="resultado" id="resultado"></div>
+
+  <canvas id="grafico"></canvas>
+</div>
+
+<script>
+const modeloSelect = document.getElementById('modelo');
+modeloSelect.addEventListener('change', function() {
+  const camposLog = document.getElementById('camposLogistico');
+  const camposExp = document.getElementById('camposExponencial');
+  const ecuacion = document.getElementById('ecuacion');
+  document.getElementById('resultado').innerHTML = "";
+  if (this.value === 'logistico') {
+    camposLog.style.display = 'block';
+    camposExp.style.display = 'none';
+    ecuacion.innerHTML = `<p>Solución del modelo logístico:</p><p>\\[ P(t) = \\frac{K}{1 + \\left(\\frac{K - P_0}{P_0}\\right) e^{-rt}} \\]</p>`;
+  } else {
+    camposLog.style.display = 'none';
+    camposExp.style.display = 'block';
+    ecuacion.innerHTML = `<p>Solución del modelo exponencial:</p><p>\\[ P(t) = P_0 e^{rt} \\]</p>`;
+  }
+  MathJax.typeset();
+});
+modeloSelect.dispatchEvent(new Event('change'));
+
+function calcularModelo() {
+  const modelo = modeloSelect.value;
+  let datos = [], etiquetas = [];
+  let resultadoHTML = "";
+
+  if (modelo === 'logistico') {
+    const P0 = parseFloat(document.getElementById("P0").value);
+    const Pinter = parseFloat(document.getElementById("PinterLog").value);
+    const tinter = parseFloat(document.getElementById("tinterLog").value);
+    const K = parseFloat(document.getElementById("K").value);
+    const tpred = parseFloat(document.getElementById("tpredecirLog").value);
+
+    const r = Math.log((K - P0) * Pinter / ((K - Pinter) * P0)) / tinter;
+    const Pfinal = K / (1 + ((K - P0) / P0) * Math.exp(-r * tpred));
+    const tmax = Math.max(tinter, tpred);
+
+    for (let t = 0; t <= tmax; t++) {
+      let Pt = K / (1 + ((K - P0) / P0) * Math.exp(-r * t));
+      datos.push(Pt);
+      etiquetas.push(t);
+    }
+
+    resultadoHTML = `<strong>Tasa de crecimiento estimada:</strong> r = ${r.toFixed(4)}<br>` +
+                    `<strong>Población en t = ${tpred}:</strong> ${Pfinal.toFixed(2)}`;
+
+  } else {
+    const P0 = parseFloat(document.getElementById("P0exp").value);
+    const Pinter = parseFloat(document.getElementById("Pinter").value);
+    const tinter = parseFloat(document.getElementById("tinter").value);
+    const tpred = parseFloat(document.getElementById("tpredecir").value);
+
+    const r = Math.log(Pinter / P0) / tinter;
+    const Pfinal = P0 * Math.exp(r * tpred);
+    const tmax = Math.max(tinter, tpred);
+
+    for (let t = 0; t <= tmax; t++) {
+      let Pt = P0 * Math.exp(r * t);
+      datos.push(Pt);
+      etiquetas.push(t);
+    }
+
+    resultadoHTML = `<strong>Tasa de crecimiento estimada:</strong> r = ${r.toFixed(4)}<br>` +
+                    `<strong>Población en t = ${tpred}:</strong> ${Pfinal.toFixed(2)}`;
+  }
+
+  document.getElementById("resultado").innerHTML = resultadoHTML;
+
+  const ctx = document.getElementById('grafico').getContext('2d');
+  if (window.miGrafico) {
+    window.miGrafico.destroy();
+  }
+  window.miGrafico = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: etiquetas,
+      datasets: [{
+        label: 'Población P(t)',
+        data: datos,
+        fill: false,
+        borderColor: modelo === 'logistico' ? 'blue' : 'green',
+        tension: 0.1
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          display: true
+        },
+        title: {
+          display: true,
+          text: 'Evolución de la población en el tiempo'
+        }
+      },
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: 'Tiempo (t)'
+          }
+        },
+        y: {
+          title: {
+            display: true,
+            text: 'Población P(t)'
+          },
+          beginAtZero: true
+        }
+      }
+    }
+  });
+  MathJax.typeset();
+}
+</script>
+</body>
+</html>
